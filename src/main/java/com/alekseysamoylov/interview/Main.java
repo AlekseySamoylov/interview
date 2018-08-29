@@ -12,30 +12,43 @@ import org.slf4j.LoggerFactory;
  */
 public class Main {
   static Logger logger = LoggerFactory.getLogger("Main");
+  static int interrupt = 0;
 
-  public static void main(String[] args) {
-    Map<UserData, CreditInformation> ucm = new HashMap<>(24);
+  public static void main(String[] args) throws InterruptedException {
+    Map<UserData, CreditInformation> ucm = new HashMap<>(100);
 
-    UserData u1 = new UserData(1345l, "Name1");
-    CreditInformation c1 = new CreditInformation(30000l, "c1", 4);
+    UserData u = new UserData(10l, "Name");
+    CreditInformation c = new CreditInformation(1000000l, "c", 10);
 
-    UserData u2 = new UserData(2000000l, "Name2");
-    CreditInformation c2 = new CreditInformation(30000l, "c1", 4);
+    ucm.put(u, c);
 
-
-    ucm.put(u1, c1);
-    ucm.put(u2, c2);
-
-    Long id = 2000000l;
-    CreditInformation ci = ucm.get(u2);
-    if (ci.getId() == id) {
-      logger.info("Credit information: " + ci.getAmount() + " " + u2.name);
+    Long creditInformationId = 1000000l;
+    Long userDataId = 10l;
+    CreditInformation ci = ucm.get(u);
+    if (ci.getId() == creditInformationId) {
+      logger.info("Credit information: " + ci.getAmountOfMoney() + " " + u.name);
+    } else if (u.id == userDataId) {
+      System.out.println("Equality user id");
     }
 
-    CreditInformation ci2 = ucm.get(new UserData(2000000l, "Name2"));
+    new Thread(() -> {
+      while (interrupt == 0) {
+        try {
+          // do something
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {}
+      }
+    }).start();
 
-    System.err.println("Error: " + ci2.getAmount());
+    interrupt = 1;
 
+    CreditInformation ci2 = ucm.get(new UserData(10l, "Name"));
+
+    try {
+      System.err.println("Error: " + ci2.getAmountOfMoney());
+    } catch (Exception ex) {
+    }
+    System.err.println("Error: " + ci2.getName());
   }
 
 
@@ -65,12 +78,12 @@ public class Main {
 
     private Long id;
     private String name;
-    private double amount;
+    private double amountOfMoney;
 
     public CreditInformation(Long id, String name, double amount) {
       this.id = id;
       this.name = name;
-      this.amount = amount;
+      this.amountOfMoney = amount;
     }
 
     /**
@@ -90,11 +103,11 @@ public class Main {
     }
 
     /**
-     * get amount
-     * @return amount
+     * get amountOfMoney
+     * @return amountOfMoney
      */
-    public double getAmount() {
-      return amount;
+    public double getAmountOfMoney() {
+      return amountOfMoney;
     }
   }
 }

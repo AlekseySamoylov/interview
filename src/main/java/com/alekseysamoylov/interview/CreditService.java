@@ -1,20 +1,34 @@
 package com.alekseysamoylov.interview;
 
 
+import com.alekseysamoylov.interview.repository.CreditRepository;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Class created by Aleksey Samoylov
  */
-public class Main {
+@Transactional
+public class CreditService {
+
   static Logger logger = LoggerFactory.getLogger("Main");
   static int interrupt = 0;
 
-  public static void main(String[] args) throws InterruptedException {
+  @Autowired
+  CreditRepository creditRepository;
+
+  public static void main(String... something) throws InterruptedException {
+    new CreditService().perform();
+  }
+
+  public void perform() throws InterruptedException {
     Map<UserData, CreditInformation> ucm = new HashMap<>(100);
 
     UserData u = new UserData(10l, "Name");
@@ -31,16 +45,41 @@ public class Main {
       System.out.println("Equality user id");
     }
 
-    new Thread(() -> {
-      while (interrupt == 0) {
-        try {
-          // do something
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {}
-      }
-    }).start();
+    for (int o = 0; o < 10000; o++) {
+      new Thread(() -> {
+        int interruptLocal = interrupt;
+        while (interruptLocal < 5) {
+          if (interruptLocal != interrupt) {
+            interruptLocal = interrupt;
+          }
+          logger.info("Do read value... " + interruptLocal);
+        }
+      }).start();
+    }
 
-    interrupt = 1;
+    Thread.sleep(1000);
+
+    new Thread(() -> {
+      while (interrupt < 5) {
+        try {
+          interrupt = ++interrupt;
+          System.out.println("Do change value... " + interrupt);
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+        }
+      }
+    }).run();
+
+    Thread.sleep(1000);
+
+    ucm.values().parallelStream().filter(a -> a.getAmountOfMoney() > 100 && a.name == "System")
+        .forEach(a -> {
+          List<CreditInformation> creditInformations = creditRepository.getAllCreditInformation();
+          if (creditInformations.contains(a)) {
+            a.amountOfMoney = 0;
+          }
+          save(a);
+        });
 
     CreditInformation ci2 = ucm.get(new UserData(10l, "Name"));
 
@@ -51,8 +90,13 @@ public class Main {
     System.err.println("Error: " + ci2.getName());
   }
 
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void save(CreditInformation creditInformation) {
+    creditRepository.save(creditInformation);
+  }
 
-  private static class UserData {
+  public static class UserData {
+
     Long id;
     String name;
 
@@ -74,7 +118,7 @@ public class Main {
     }
   }
 
-  private static class CreditInformation implements Serializable {
+  public static class CreditInformation implements Serializable {
 
     private Long id;
     private String name;
@@ -88,6 +132,7 @@ public class Main {
 
     /**
      * get id
+     *
      * @return id
      */
     public Long getId() {
@@ -96,6 +141,7 @@ public class Main {
 
     /**
      * get name
+     *
      * @return name
      */
     public String getName() {
@@ -104,6 +150,7 @@ public class Main {
 
     /**
      * get amountOfMoney
+     *
      * @return amountOfMoney
      */
     public double getAmountOfMoney() {

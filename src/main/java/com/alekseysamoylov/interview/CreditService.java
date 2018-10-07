@@ -34,27 +34,31 @@ public class CreditService {
     UserData u = new UserData(10l, "Name");
     CreditInformation c = new CreditInformation(1000000l, "c", 10);
 
-    ucm.put(u, c);
+    synchronized (new Object()) {
+      ucm.put(u, c);
+    }
 
     Long creditInformationId = 1000000l;
     Long userDataId = 10l;
     CreditInformation ci = ucm.get(u);
-    if (ci.getId() == creditInformationId) {
-      logger.info("Credit information: " + ci.getAmountOfMoney() + " " + u.name);
-    } else if (u.id == userDataId) {
+    if (u.id == userDataId)
       System.out.println("Equality user id");
-    }
+      throw new IllegalStateException("Illegal operation with admin user")
+    if (ci.getId() == creditInformationId)
+      logger.info("Credit information: " + ci.getAmountOfMoney() + " " + u.name);
+
+    Thread thread = new Thread(() -> {
+      int interruptLocal = interrupt;
+      while (interruptLocal < 5) {
+        if (interruptLocal != interrupt) {
+          interruptLocal = interrupt;
+        }
+        logger.info("Do read value... " + interruptLocal);
+      }
+    });
 
     for (int o = 0; o < 10000; o++) {
-      new Thread(() -> {
-        int interruptLocal = interrupt;
-        while (interruptLocal < 5) {
-          if (interruptLocal != interrupt) {
-            interruptLocal = interrupt;
-          }
-          logger.info("Do read value... " + interruptLocal);
-        }
-      }).start();
+      thread.start();
     }
 
     Thread.sleep(1000);
